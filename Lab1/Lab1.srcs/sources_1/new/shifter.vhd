@@ -41,11 +41,18 @@ out_slt(0) <= slt_bit;
 out_sltu <= (others => '0');
 out_sltu(0) <= sltu_bit;
 
-shift_out <= out_sll when op = "0010" else
-     out_slt when op = "0100" else 
-     out_sltu when op = "0110" else 
-     out_srl when op = "1010" else
-     out_sra when op = "1011" else
-     (others => '0');
+--shift_out <= out_sll when op = "0010" else
+--     out_slt when op = "0100" else 
+--     out_sltu when op = "0110" else 
+--     out_srl when op = "1010" else
+--     out_sra when op = "1011" else
+--     (others => '0');
+with op select
+    shift_out <= out_sll  when "0010",
+                 out_slt  when "0100",
+                 out_sltu when "0110",
+                 out_srl  when "1010",
+                 out_sra  when "1011",
+                 a when others;
 
 end Behavioral;

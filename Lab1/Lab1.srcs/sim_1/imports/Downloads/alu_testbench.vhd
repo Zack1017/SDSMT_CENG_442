@@ -14,11 +14,10 @@ architecture Behavioral of alu_testbench is
     signal Dout : STD_LOGIC_VECTOR (XLen-1 downto 0);
 begin
     uut: entity work.alu (Behavioral)
-        generic map (XLen => XLen)
-        port map (Abus => Abus,
-                  Bbus => Bbus,
+        port map (a => Abus,
+                  b => Bbus,
                   ALUfunc => ALUfunc,
-                  Dout => Dout);
+                  aluOut => Dout);
     
     test_process: process 
         variable dout_int :integer;

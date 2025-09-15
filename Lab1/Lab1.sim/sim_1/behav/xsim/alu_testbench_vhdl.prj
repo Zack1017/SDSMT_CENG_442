@@ -1,0 +1,17 @@
+# compile vhdl design source files
+vhdl xil_defaultlib  \
+"../../../../Lab1.srcs/sources_1/new/control_word.vhd" \
+"../../../../Lab1.srcs/sources_1/imports/new/generic_register.vhdl" \
+"../../../../Lab1.srcs/sources_1/imports/new/generic_register_file.vhdl" \
+"../../../../Lab1.srcs/sources_1/imports/new/decoder_act_high.vhdl" \
+"../../../../Lab1.srcs/sources_1/new/alu.vhd" \
+"../../../../Lab1.srcs/sources_1/new/pc.vhd" \
+"../../../../Lab1.srcs/sources_1/new/Add_sub.vhd" \
+"../../../../Lab1.srcs/sources_1/new/shifter.vhd" \
+"../../../../Lab1.srcs/sources_1/new/BTU.vhd" \
+"../../../../Lab1.srcs/sources_1/new/data_path.vhd" \
+"../../../../Lab1.srcs/sim_1/imports/Downloads/alu_testbench.vhd" \
+"../../../../Lab1.srcs/sim_1/new/RegisterFile_Testbench.vhd" \
+
+# Do not sort compile order
+nosort
