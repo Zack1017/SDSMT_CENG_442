@@ -1,0 +1,49 @@
+{
+   "ActiveEmotionalView":"Default View",
+   "Default View_ScaleFactor":"0.607257",
+   "Default View_TopLeft":"12,-76",
+   "ExpandedHierarchyInLayout":"",
+   "guistr":"# # String gsaved with Nlview 7.8.0 2024-04-26 e1825d835c VDI=44 GEI=38 GUI=JA:21.0 TLS
+#  -string -flagsOSRD
+preplace port port-id_sys_clock -pg 1 -lvl 0 -x -10 -y 270 -defaultsOSRD
+preplace port port-id_reset -pg 1 -lvl 0 -x -10 -y 190 -defaultsOSRD
+preplace port port-id_Read_Done -pg 1 -lvl 7 -x 1850 -y 70 -defaultsOSRD
+preplace port port-id_Error -pg 1 -lvl 7 -x 1850 -y 110 -defaultsOSRD
+preplace port port-id_Start_read -pg 1 -lvl 0 -x -10 -y 50 -defaultsOSRD
+preplace portBus Read_Data -pg 1 -lvl 7 -x 1850 -y 90 -defaultsOSRD
+preplace portBus Read_address -pg 1 -lvl 0 -x -10 -y 70 -defaultsOSRD
+preplace inst entity_name_0 -pg 1 -lvl 3 -x 780 -y 80 -defaultsOSRD
+preplace inst axi_interconnect_0 -pg 1 -lvl 4 -x 1120 -y 230 -defaultsOSRD
+preplace inst clk_wiz -pg 1 -lvl 1 -x 110 -y 260 -defaultsOSRD
+preplace inst rst_clk_wiz_100M -pg 1 -lvl 2 -x 410 -y 280 -defaultsOSRD
+preplace inst axi_bram_ctrl_0 -pg 1 -lvl 5 -x 1420 -y 250 -defaultsOSRD
+preplace inst axi_bram_ctrl_0_bram -pg 1 -lvl 6 -x 1690 -y 250 -defaultsOSRD
+preplace inst ilconstant_0 -pg 1 -lvl 1 -x 110 -y 370 -defaultsOSRD
+preplace inst ilconstant_1 -pg 1 -lvl 1 -x 110 -y 130 -defaultsOSRD
+preplace inst RV32I_MicroCore_0 -pg 1 -lvl 2 -x 410 -y 120 -defaultsOSRD
+preplace netloc Read_address_1 1 0 3 10J 10 NJ 10 610J
+preplace netloc Start_read_1 1 0 3 20J 20 NJ 20 600J
+preplace netloc clk_wiz_clk_out1 1 1 4 200 30 590 170 970 370 1270J
+preplace netloc clk_wiz_locked 1 1 1 200 270n
+preplace netloc entity_name_0_Error 1 3 4 970J 90 NJ 90 NJ 90 1820J
+preplace netloc entity_name_0_Read_Data 1 3 4 950J 60 NJ 60 NJ 60 1830J
+preplace netloc entity_name_0_Read_Done 1 3 4 NJ 70 NJ 70 NJ 70 NJ
+preplace netloc ilconstant_0_dout 1 1 1 230 300n
+preplace netloc ilconstant_1_dout 1 1 1 210J 130n
+preplace netloc reset_1 1 0 2 20 430 220J
+preplace netloc rst_clk_wiz_100M_peripheral_aresetn 1 1 4 240 40 580 190 950 380 1280J
+preplace netloc sys_clock_1 1 0 1 NJ 270
+preplace netloc axi_bram_ctrl_0_BRAM_PORTA 1 5 1 NJ 250
+preplace netloc axi_interconnect_0_M00_AXI 1 4 1 1280 220n
+preplace netloc entity_name_0_M_AXI 1 3 1 960 50n
+preplace netloc axi_interconnect_0_M01_AXI 1 1 4 230 -10 NJ -10 NJ -10 1270
+levelinfo -pg 1 -10 110 410 780 1120 1420 1690 1850
+pagesize -pg 1 -db -bbox -sgen -190 -80 2010 570
+"
+}
+{
+   "da_axi4_cnt":"2",
+   "da_board_cnt":"3",
+   "da_bram_cntlr_cnt":"1",
+   "da_clkrst_cnt":"2"
+}
