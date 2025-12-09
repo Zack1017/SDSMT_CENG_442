@@ -229,6 +229,8 @@ begin
                 fetch_count <= fetch_count + 1;
                 if fetch_count = 1 then
                     interrupt <= '1';
+                elsif fetch_count = 2 then
+                    interrupt <= '0';
                 end if;
             elsif I_M_AXI_RVALID = '1' and I_M_AXI_RREADY = '1' then
                 I_M_AXI_RVALID <= '0';
