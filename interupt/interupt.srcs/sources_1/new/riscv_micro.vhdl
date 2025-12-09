@@ -20,6 +20,7 @@ entity riscv_micro is
     port (
 		CLK	: in std_logic;    -- Global Clock Signal.
 		RESET : in std_logic;  -- Global Reset Singal. This Signal is Active High
+		INTERRUPT : in std_logic;
 		
         -- AXI Write Address Channel
 		I_M_AXI_AWID	: out std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0); -- Master Interface Write Address ID
@@ -124,7 +125,14 @@ architecture Behavioral of riscv_micro is
     signal CW : control_word;
     signal CW_Zero : control_word;
     signal res : std_logic;
-    
+    signal CW_Int : control_word;
+    signal CW_Mret : control_word;
+    signal clear_cw_full : std_logic;
+    signal interrupt_pending : std_logic;
+    signal interrupt_taken : std_logic;
+    signal trap_active : std_logic;
+    signal mepc : std_logic_vector(31 downto 0);
+
     signal Start_read : std_logic;
     signal Read_address: std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
     signal Current_address: std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
@@ -148,8 +156,91 @@ architecture Behavioral of riscv_micro is
     signal n_ls_busy :std_logic;
     signal clear_cw :std_logic;
     signal load_data_ready : std_logic;
+
+    constant INTERRUPT_VECTOR : std_logic_vector(31 downto 0) := x"00000080";
+    constant MRET_INSTR : std_logic_vector(31 downto 0) := x"30200073";
+    signal is_mret : std_logic;
 begin
     res <= not Reset;
+
+    process (CLK)
+    begin
+        if rising_edge(CLK) then
+            if Reset = '1' then
+                interrupt_pending <= '0';
+                trap_active <= '0';
+                mepc <= (others => '0');
+            elsif interrupt_taken = '1' then
+                interrupt_pending <= '0';
+                trap_active <= '1';
+                mepc <= Current_address;
+            elsif is_mret = '1' and exec = '1' then
+                trap_active <= '0';
+            elsif INTERRUPT = '1' and trap_active = '0' then
+                interrupt_pending <= '1';
+            end if;
+        end if;
+    end process;
+
+    interrupt_taken <= exec and interrupt_pending;
+    is_mret <= '1' when Read_Data = MRET_INSTR else '0';
+
+    CW_Zero <= (
+        Asel => (others => '0'),
+        Bsel => (others => '0'),
+        Dsel => (others => '0'),
+        Dlen => '0',
+        PCAsel => '0',
+        PCAUsel => '0',
+        IMMBsel => '0',
+        PCDsel => '0',
+        PCie => '0',
+        PCle => '0',
+        isBR => '0',
+        isLoad => '0',
+        isStore => '0',
+        BRcond => (others => '0'),
+        ALUFunc => (others => '0'),
+        IMM => (others => '0')
+    );
+
+    CW_Int <= (
+        Asel => (others => '0'),
+        Bsel => (others => '0'),
+        Dsel => (others => '0'),
+        Dlen => '0',
+        PCAsel => '0',
+        PCAUsel => '0',
+        IMMBsel => '1',
+        PCDsel => '0',
+        PCie => '0',
+        PCle => '1',
+        isBR => '0',
+        isLoad => '0',
+        isStore => '0',
+        BRcond => (others => '0'),
+        ALUFunc => (others => '0'),
+        IMM => INTERRUPT_VECTOR
+    );
+
+    CW_Mret <= (
+        Asel => (others => '0'),
+        Bsel => (others => '0'),
+        Dsel => (others => '0'),
+        Dlen => '0',
+        PCAsel => '0',
+        PCAUsel => '0',
+        IMMBsel => '1',
+        PCDsel => '0',
+        PCie => '0',
+        PCle => '1',
+        isBR => '0',
+        isLoad => '0',
+        isStore => '0',
+        BRcond => (others => '0'),
+        ALUFunc => (others => '0'),
+        IMM => mepc
+    );
 
     fetch_unit : entity work.fetch_unit (Behavioral)
         port map (
@@ -160,7 +251,7 @@ begin
             Error => Error,
             PCle => fu_PCle,
             PCie => fu_PCie,
-            Clear_cw => clear_cw,
+            Clear_cw => clear_cw_full,
             M_AXI_ACLK => CLK,
             M_AXI_ARESETN => res,
             M_AXI_AWID => I_M_AXI_AWID,
@@ -209,23 +300,26 @@ begin
     decoder: entity work.decoder (Behavioral)
         port map (instruction => Read_Data, CW => CW_Dec);
     
-    CW <= (
-        Asel => CW_Dec.Asel,
-        Bsel => CW_Dec.Bsel,
-        Dsel => CW_Dec.Dsel,
-        DLen => CW_Dec.DLen and exec,
-        PCAsel => CW_Dec.PCAsel,
-        PCAUsel => CW_Dec.PCAUsel,
-        IMMBsel => CW_Dec.IMMBsel,
-        PCDsel => CW_Dec.PCDsel,
-        PCie => fu_PCie,
-        PCle => CW_Dec.PCle and exec,
-        isBR => CW_Dec.isBR,
-        isLoad => CW_Dec.isLoad,
-        isStore => CW_Dec.isStore,
-        BRcond => CW_Dec.BRcond,
-        ALUFunc => CW_Dec.ALUFunc,
-        IMM => CW_Dec.IMM);
+    CW <= CW_Int when interrupt_pending = '1' else
+          CW_Mret when is_mret = '1' else
+          CW_Zero when clear_cw_full = '1' else
+          (
+            Asel => CW_Dec.Asel,
+            Bsel => CW_Dec.Bsel,
+            Dsel => CW_Dec.Dsel,
+            DLen => CW_Dec.DLen and exec,
+            PCAsel => CW_Dec.PCAsel,
+            PCAUsel => CW_Dec.PCAUsel,
+            IMMBsel => CW_Dec.IMMBsel,
+            PCDsel => CW_Dec.PCDsel,
+            PCie => fu_PCie,
+            PCle => CW_Dec.PCle and exec,
+            isBR => CW_Dec.isBR,
+            isLoad => CW_Dec.isLoad,
+            isStore => CW_Dec.isStore,
+            BRcond => CW_Dec.BRcond,
+            ALUFunc => CW_Dec.ALUFunc,
+            IMM => CW_Dec.IMM);
     
     datapath: entity work.datapath (Behavioral)
         port map (Controller => CW, 
@@ -251,12 +345,14 @@ begin
                 done => Read_Done, 
                 exec => exec, 
                 Is_load => is_load, 
-                Is_store => is_store, 
-                Start_load => start_load, 
+                Is_store => is_store,
+                Start_load => start_load,
                 Start_store => start_store,
                 Ls_busy => ls_busy,
-                clear_cw => clear_cw
+                clear_cw => clear_cw_full
                 );
+
+    clear_cw_full <= clear_cw or interrupt_pending;
     
     n_ls_busy <= not ls_busy;
     
