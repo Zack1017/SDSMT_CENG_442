@@ -14,7 +14,10 @@ entity datapath is
            is_store: out STD_LOGIC;
            store_data: out STD_LOGIC_VECTOR (XLen-1 downto 0);
            load_data: in STD_LOGIC_VECTOR (XLen-1 downto 0);
-           load_data_ready : in STD_LOGIC
+           load_data_ready : in STD_LOGIC;
+           csr_rdata : in STD_LOGIC_VECTOR (XLen-1 downto 0) := (others => '0');
+           csr_writeback : in STD_LOGIC := '0';
+           rs1_value : out STD_LOGIC_VECTOR (XLen-1 downto 0)
            );
 end datapath;
 
@@ -73,12 +76,14 @@ begin
      pc_addr <= PCout;
      
      ls_addr <= Dout;
-     Dbus <= PCout when Controller.PCDsel = '1' else 
+     Dbus <= PCout when Controller.PCDsel = '1' else
+             csr_rdata when csr_writeback = '1' else
              load_data when load_ready = '1' else Dout;
              
      store_data <= RegBOut;
      is_load <= Controller.isLoad;
      is_store <= Controller.isStore;
-     
-    
+     rs1_value <= RegAOut;
+
+
 end Behavioral;

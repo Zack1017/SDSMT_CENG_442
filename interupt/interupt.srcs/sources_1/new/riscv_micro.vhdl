@@ -136,8 +136,19 @@ architecture Behavioral of riscv_micro is
     signal trap_active : std_logic;
     signal interrupt_request : std_logic;
     signal selected_cause : std_logic_vector(3 downto 0);
-    signal trap_cause : std_logic_vector(3 downto 0);
-    signal mepc : std_logic_vector(31 downto 0);
+    signal trap_cause : std_logic_vector(3 downto 0) := (others => '0');
+    signal pending_external : std_logic;
+    signal pending_timer : std_logic;
+    signal pending_software : std_logic;
+    signal mstatus_mie : std_logic := '1';
+    signal mie_external : std_logic := '1';
+    signal mie_timer : std_logic := '1';
+    signal mie_software : std_logic := '1';
+    signal csr_rdata : std_logic_vector(31 downto 0);
+    signal csr_write : std_logic;
+    signal csr_operand : std_logic_vector(31 downto 0);
+    signal rs1_value : std_logic_vector(31 downto 0);
+    signal mepc : std_logic_vector(31 downto 0) := (others => '0');
 
     signal Start_read : std_logic;
     signal Read_address: std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
@@ -169,14 +180,20 @@ architecture Behavioral of riscv_micro is
 begin
     res <= not Reset;
 
-    selected_cause <= "1011" when INTERRUPT = '1' else
-                      "0111" when TIMER_INTERRUPT = '1' else
-                      "0011" when SOFTWARE_INTERRUPT = '1' else
+    pending_external <= INTERRUPT and mie_external;
+    pending_timer <= TIMER_INTERRUPT and mie_timer;
+    pending_software <= SOFTWARE_INTERRUPT and mie_software;
+
+    selected_cause <= "1011" when pending_external = '1' else
+                      "0111" when pending_timer = '1' else
+                      "0011" when pending_software = '1' else
                       (others => '0');
 
-    interrupt_request <= '1' when trap_active = '0' and selected_cause /= "0000" else '0';
+    interrupt_request <= '1' when trap_active = '0' and mstatus_mie = '1' and selected_cause /= "0000" else '0';
 
     process (CLK)
+        variable csr_current : std_logic_vector(31 downto 0);
+        variable csr_new : std_logic_vector(31 downto 0);
     begin
         if rising_edge(CLK) then
             if Reset = '1' then
@@ -184,6 +201,33 @@ begin
                 trap_active <= '0';
                 mepc <= (others => '0');
                 trap_cause <= (others => '0');
+                mstatus_mie <= '1';
+                mie_external <= '1';
+                mie_timer <= '1';
+                mie_software <= '1';
+            elsif csr_write = '1' then
+                csr_current := csr_rdata;
+                case CW.CSRop is
+                    when "00" => csr_new := csr_operand;
+                    when "01" => csr_new := csr_current or csr_operand;
+                    when "10" => csr_new := csr_current and not csr_operand;
+                    when others => csr_new := csr_current;
+                end case;
+
+                case CW.CSRaddr is
+                    when x"300" =>
+                        mstatus_mie <= csr_new(3);
+                    when x"304" =>
+                        mie_software <= csr_new(3);
+                        mie_timer <= csr_new(7);
+                        mie_external <= csr_new(11);
+                    when x"341" =>
+                        mepc <= csr_new;
+                    when x"342" =>
+                        trap_cause <= csr_new(3 downto 0);
+                    when others =>
+                        null;
+                end case;
             elsif interrupt_taken = '1' then
                 interrupt_pending <= '0';
                 trap_active <= '1';
@@ -199,6 +243,32 @@ begin
 
     interrupt_taken <= exec and interrupt_pending;
     is_mret <= '1' when Read_Data = MRET_INSTR else '0';
+    csr_write <= exec and CW.isCSR;
+    csr_operand <= (27 downto 0 => '0') & CW.Asel when CW.CSRimm = '1' else rs1_value;
+
+    process(all)
+    begin
+        csr_rdata <= (others => '0');
+        case CW.CSRaddr is
+            when x"300" =>
+                csr_rdata(3) <= mstatus_mie;
+            when x"304" =>
+                csr_rdata(11) <= mie_external;
+                csr_rdata(7) <= mie_timer;
+                csr_rdata(3) <= mie_software;
+            when x"341" =>
+                csr_rdata <= mepc;
+            when x"342" =>
+                csr_rdata(31) <= '1';
+                csr_rdata(3 downto 0) <= trap_cause;
+            when x"344" =>
+                csr_rdata(11) <= INTERRUPT;
+                csr_rdata(7) <= TIMER_INTERRUPT;
+                csr_rdata(3) <= SOFTWARE_INTERRUPT;
+            when others =>
+                null;
+        end case;
+    end process;
 
     CW_Zero <= (
         Asel => (others => '0'),
@@ -214,6 +284,10 @@ begin
         isBR => '0',
         isLoad => '0',
         isStore => '0',
+        isCSR => '0',
+        CSRop => (others => '0'),
+        CSRimm => '0',
+        CSRaddr => (others => '0'),
         BRcond => (others => '0'),
         ALUFunc => (others => '0'),
         IMM => (others => '0')
@@ -233,6 +307,10 @@ begin
         isBR => '0',
         isLoad => '0',
         isStore => '0',
+        isCSR => '0',
+        CSRop => (others => '0'),
+        CSRimm => '0',
+        CSRaddr => (others => '0'),
         BRcond => (others => '0'),
         ALUFunc => (others => '0'),
         IMM => INTERRUPT_VECTOR
@@ -252,6 +330,10 @@ begin
         isBR => '0',
         isLoad => '0',
         isStore => '0',
+        isCSR => '0',
+        CSRop => (others => '0'),
+        CSRimm => '0',
+        CSRaddr => (others => '0'),
         BRcond => (others => '0'),
         ALUFunc => (others => '0'),
         IMM => mepc
@@ -332,6 +414,10 @@ begin
             isBR => CW_Dec.isBR,
             isLoad => CW_Dec.isLoad,
             isStore => CW_Dec.isStore,
+            isCSR => CW_Dec.isCSR,
+            CSRop => CW_Dec.CSRop,
+            CSRimm => CW_Dec.CSRimm,
+            CSRaddr => CW_Dec.CSRaddr,
             BRcond => CW_Dec.BRcond,
             ALUFunc => CW_Dec.ALUFunc,
             IMM => CW_Dec.IMM);
@@ -348,7 +434,10 @@ begin
                   store_data => Store_Data,
                   load_data => Load_Data,
                   ls_addr => LS_address,
-                  load_data_ready => load_data_ready
+                  load_data_ready => load_data_ready,
+                  csr_rdata => csr_rdata,
+                  csr_writeback => CW.isCSR,
+                  rs1_value => rs1_value
                   );
     
     

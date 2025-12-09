@@ -116,7 +116,7 @@ architecture Behavioral of riscv_micro_interrupt_tb is
     function instruction_at(addr : std_logic_vector(31 downto 0)) return std_logic_vector is
     begin
         case addr is
-            when x"00000000" => return x"00000013"; -- nop
+            when x"00000000" => return x"300020F3"; -- csrrs x1, mstatus, x0
             when x"00000004" => return x"00000013"; -- nop (interrupted)
             when x"00000080" => return x"30200073"; -- mret
             when others => return x"00000013";
