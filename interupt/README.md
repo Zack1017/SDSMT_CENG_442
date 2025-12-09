@@ -1,0 +1,7 @@
+# Interrupt implementation overview
+
+This RISC-V microcontroller exposes three level-sensitive interrupt sources—`INTERRUPT` (external), `TIMER_INTERRUPT`, and `SOFTWARE_INTERRUPT`. Requests are prioritized external over timer over software, masked by `mstatus.mie` and the corresponding `mie` bits, and collapsed into a single `interrupt_pending` latch and `trap_cause` code for observation on the `TRAP_CAUSE` port. When a request is taken, the core saves the faulting PC into `mepc`, redirects to the fixed vector at `0x00000080`, and holds `trap_active` until an `MRET` (0x30200073) executes. Return uses the latched `mepc` value to restore fetch.
+
+Machine CSRs are handled through the CSRRW/CSRRS/CSRRC paths: `mstatus` (0x300) for the global MIE bit, `mie` (0x304) for per-source enables, `mepc` (0x341) for the saved return PC, and `mcause` (0x342) for the latched cause. A read-only view of the live interrupt pins is exposed at 0x344, and CSR operands may come from either a register source or the immediate field.
+
+The self-checking testbench at `interupt.srcs/sim_1/new/riscv_micro_interrupt_tb.vhdl` pulses simultaneous external and timer interrupts after reset, logs the fetch PC sequence, and asserts that the core vectors to `0x80`, reports the external cause, and returns via `MRET` to the pre-interrupt PC. Use your preferred VHDL simulator to compile the design sources under `interupt.srcs/sources_1/new/` alongside the testbench and run the `riscv_micro_interrupt_tb` top-level.
