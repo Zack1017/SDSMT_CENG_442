@@ -11,6 +11,9 @@ architecture Behavioral of riscv_micro_interrupt_tb is
     signal clk : std_logic := '0';
     signal reset : std_logic := '1';
     signal interrupt : std_logic := '0';
+    signal timer_interrupt : std_logic := '0';
+    signal software_interrupt : std_logic := '0';
+    signal trap_cause : std_logic_vector(3 downto 0);
 
     signal I_M_AXI_AWID    : std_logic_vector(0 downto 0);
     signal I_M_AXI_AWADDR  : std_logic_vector(31 downto 0);
@@ -129,6 +132,9 @@ begin
             CLK => clk,
             RESET => reset,
             INTERRUPT => interrupt,
+            TIMER_INTERRUPT => timer_interrupt,
+            SOFTWARE_INTERRUPT => software_interrupt,
+            TRAP_CAUSE => trap_cause,
             I_M_AXI_AWID => I_M_AXI_AWID,
             I_M_AXI_AWADDR => I_M_AXI_AWADDR,
             I_M_AXI_AWLEN => I_M_AXI_AWLEN,
@@ -229,8 +235,10 @@ begin
                 fetch_count <= fetch_count + 1;
                 if fetch_count = 1 then
                     interrupt <= '1';
+                    timer_interrupt <= '1';
                 elsif fetch_count = 2 then
                     interrupt <= '0';
+                    timer_interrupt <= '0';
                 end if;
             elsif I_M_AXI_RVALID = '1' and I_M_AXI_RREADY = '1' then
                 I_M_AXI_RVALID <= '0';
@@ -253,6 +261,7 @@ begin
         assert fetch_log(1) = x"00000004" report "Second fetch did not advance PC" severity failure;
         assert fetch_log(2) = x"00000080" report "Interrupt did not vector to 0x80" severity failure;
         assert fetch_log(3) = x"00000004" report "MRET did not return to MEPC" severity failure;
+        assert trap_cause = "1011" report "External interrupt did not win priority" severity failure;
         report "Interrupt flow test passed" severity note;
         wait;
     end process;

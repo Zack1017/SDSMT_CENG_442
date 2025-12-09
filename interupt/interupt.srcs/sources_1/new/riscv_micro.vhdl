@@ -21,6 +21,9 @@ entity riscv_micro is
 		CLK	: in std_logic;    -- Global Clock Signal.
 		RESET : in std_logic;  -- Global Reset Singal. This Signal is Active High
 		INTERRUPT : in std_logic;
+		TIMER_INTERRUPT : in std_logic := '0';
+		SOFTWARE_INTERRUPT : in std_logic := '0';
+		TRAP_CAUSE : out std_logic_vector(3 downto 0);
 		
         -- AXI Write Address Channel
 		I_M_AXI_AWID	: out std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0); -- Master Interface Write Address ID
@@ -131,6 +134,9 @@ architecture Behavioral of riscv_micro is
     signal interrupt_pending : std_logic;
     signal interrupt_taken : std_logic;
     signal trap_active : std_logic;
+    signal interrupt_request : std_logic;
+    signal selected_cause : std_logic_vector(3 downto 0);
+    signal trap_cause : std_logic_vector(3 downto 0);
     signal mepc : std_logic_vector(31 downto 0);
 
     signal Start_read : std_logic;
@@ -163,6 +169,13 @@ architecture Behavioral of riscv_micro is
 begin
     res <= not Reset;
 
+    selected_cause <= "1011" when INTERRUPT = '1' else
+                      "0111" when TIMER_INTERRUPT = '1' else
+                      "0011" when SOFTWARE_INTERRUPT = '1' else
+                      (others => '0');
+
+    interrupt_request <= '1' when trap_active = '0' and selected_cause /= "0000" else '0';
+
     process (CLK)
     begin
         if rising_edge(CLK) then
@@ -170,13 +183,15 @@ begin
                 interrupt_pending <= '0';
                 trap_active <= '0';
                 mepc <= (others => '0');
+                trap_cause <= (others => '0');
             elsif interrupt_taken = '1' then
                 interrupt_pending <= '0';
                 trap_active <= '1';
                 mepc <= Current_address;
+                trap_cause <= selected_cause;
             elsif is_mret = '1' and exec = '1' then
                 trap_active <= '0';
-            elsif INTERRUPT = '1' and trap_active = '0' then
+            elsif interrupt_request = '1' then
                 interrupt_pending <= '1';
             end if;
         end if;
@@ -339,8 +354,8 @@ begin
     
     sequencer: entity work.sequencer (Behavioral)
         port map (
-                clk => CLK, 
-                res => RESET, 
+                clk => CLK,
+                res => RESET,
                 start => Start_read, 
                 done => Read_Done, 
                 exec => exec, 
@@ -353,7 +368,9 @@ begin
                 );
 
     clear_cw_full <= clear_cw or interrupt_pending;
-    
+
+    TRAP_CAUSE <= trap_cause;
+
     n_ls_busy <= not ls_busy;
     
     load_store: entity work.load_store_unit (Behavioral)
