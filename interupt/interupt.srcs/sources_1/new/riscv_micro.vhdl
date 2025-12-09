@@ -244,7 +244,7 @@ begin
     interrupt_taken <= exec and interrupt_pending;
     is_mret <= '1' when Read_Data = MRET_INSTR else '0';
     csr_write <= exec and CW.isCSR;
-    csr_operand <= (27 downto 0 => '0') & CW.Asel when CW.CSRimm = '1' else rs1_value;
+    csr_operand <= (31 downto 5 => '0') & CW.Asel when CW.CSRimm = '1' else rs1_value;
 
     process(all)
     begin
