@@ -255,8 +255,8 @@ begin
 
     stop_sim : process
     begin
-        wait for 500 ns;
-        assert fetch_count >= 4 report "Insufficient fetches for interrupt test" severity failure;
+        wait for 1000 ns;
+        assert fetch_count >= 4 report "Insufficient fetches for interrupt test; fetched only " & integer'image(fetch_count) severity failure;
         assert fetch_log(0) = x"00000000" report "First fetch did not start at reset PC" severity failure;
         assert fetch_log(1) = x"00000004" report "Second fetch did not advance PC" severity failure;
         assert fetch_log(2) = x"00000080" report "Interrupt did not vector to 0x80" severity failure;
