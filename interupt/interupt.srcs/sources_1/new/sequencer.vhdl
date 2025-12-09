@@ -59,8 +59,10 @@ begin
                       seq_execute_next when seq_execute,
                       seq_fetch_next when others;
     
-    clear_cw <= '1' when current_state = seq_start and Is_load = '0' and Is_store = '0' else 
-                '1' when current_state = seq_ls_clear else '0';
+    -- Keep the control word intact while deciding whether a memory
+    -- operation should be kicked off; otherwise the decoder output is
+    -- cleared before the sequencer can see is_load/is_store asserted.
+    clear_cw <= '1' when current_state = seq_ls_clear else '0';
     
     Start_load  <= '1' when current_state = seq_load  else '0';
     Start_store <= '1' when current_state = seq_store else '0';
