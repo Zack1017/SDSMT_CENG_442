@@ -19,7 +19,6 @@ architecture Behavioral of sequencer is
     type sequencer_state is (seq_start, seq_fetch, seq_fetch2, seq_load, seq_load2, seq_store, seq_store2, seq_ls_clear, seq_execute);
     signal current_state : sequencer_state;
     signal next_state : sequencer_state;
-    signal next_state_final : sequencer_state;
     signal seq_fetch_next : sequencer_state;
     signal seq_start_next : sequencer_state;
     signal seq_fetch2_next : sequencer_state;
@@ -30,9 +29,14 @@ architecture Behavioral of sequencer is
     signal seq_execute_next : sequencer_state;
     signal seq_ls_clear_next : sequencer_state;
 begin
-    current_state <= next_state_final when rising_edge(clk);
-    
-    next_state_final <= seq_fetch when res = '1' else next_state;
+    process(clk, res)
+    begin
+        if res = '1' then
+            current_state <= seq_fetch;
+        elsif rising_edge(clk) then
+            current_state <= next_state;
+        end if;
+    end process;
     
     seq_start_next <= seq_load    when Is_load = '1'  else
                         seq_store   when Is_store = '1' else
@@ -59,8 +63,10 @@ begin
                       seq_execute_next when seq_execute,
                       seq_fetch_next when others;
     
-    clear_cw <= '1' when current_state = seq_start and Is_load = '0' and Is_store = '0' else 
-                '1' when current_state = seq_ls_clear else '0';
+    -- Keep the control word intact while deciding whether a memory
+    -- operation should be kicked off; otherwise the decoder output is
+    -- cleared before the sequencer can see is_load/is_store asserted.
+    clear_cw <= '1' when current_state = seq_ls_clear else '0';
     
     Start_load  <= '1' when current_state = seq_load  else '0';
     Start_store <= '1' when current_state = seq_store else '0';

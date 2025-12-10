@@ -1,0 +1,78 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 2041 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+72 760 Td
+(# Interrupt implementation summary) Tj
+T*
+() Tj
+T*
+(This document summarizes the interrupt-related enhancements and supporting fixes for the `riscv_micro` core.) Tj
+T*
+() Tj
+T*
+(## Interrupt sources and priority) Tj
+T*
+(- Added three level-sensitive sources: external \(`INTERRUPT`\), timer \(`TIMER_INTERRUPT`\), and software \(`SOFTWARE_INTERRUPT`\).) Tj
+T*
+(- Requests are masked by `mstatus.mie` plus the corresponding `mie` bits, then prioritized external over timer over software before latching into `interrupt_pending` with a captured `trap_cause`.) Tj
+T*
+(- On a taken interrupt, the core saves the faulting PC to `mepc`, vectors to address `0x00000080`, and holds `trap_active` until an `MRET` instruction returns to the saved `mepc`.) Tj
+T*
+() Tj
+T*
+(## CSR support) Tj
+T*
+(- Implemented CSR read/modify/write decoding for CSRRW, CSRRS, and CSRRC, allowing register or immediate operands.) Tj
+T*
+(- Machine CSRs include `mstatus` \(global MIE\), `mie` \(per-source enables\), `mepc` \(return PC\), and `mcause` \(latched cause\), with a read-only view of live interrupt pins at `0x344`.) Tj
+T*
+(- Interrupt acceptance is gated by these CSRs, aligning the external, timer, and software sources with the RISC-V machine-level model.) Tj
+T*
+() Tj
+T*
+(## Testbench coverage) Tj
+T*
+(- The `riscv_micro_interrupt_tb` testbench pulses simultaneous external and timer interrupts after reset and checks that the core vectors to `0x00000080`, reports the external cause, executes `MRET`, and resumes at the pre-interrupt PC.) Tj
+T*
+(- Fetch addresses are logged for debug visibility, and the run window was extended to allow sufficient fetches before declaring a failure.) Tj
+T*
+() Tj
+T*
+(## Supporting microarchitectural fixes) Tj
+T*
+(- Sequencer reset was tightened so the state machine deterministically enters the fetch state after reset.) Tj
+T*
+(- Control-word clearing was deferred until the load/store clear phase, allowing the `load_store_unit` to issue D-side AXI transactions when requested.) Tj
+T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000002334 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+2404
+%%EOF
