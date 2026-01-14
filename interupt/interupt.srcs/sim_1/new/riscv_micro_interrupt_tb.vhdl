@@ -246,12 +246,9 @@ begin
         end if;
     end process;
 
-    data_channel_defaults : process(all)
-    begin
         I_M_AXI_BVALID <= '0';
         D_M_AXI_BVALID <= '0';
         D_M_AXI_RVALID <= '0';
-    end process;
 
     stop_sim : process
     begin

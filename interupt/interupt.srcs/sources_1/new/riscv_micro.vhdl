@@ -136,7 +136,7 @@ architecture Behavioral of riscv_micro is
     signal trap_active : std_logic;
     signal interrupt_request : std_logic;
     signal selected_cause : std_logic_vector(3 downto 0);
-    signal trap_cause : std_logic_vector(3 downto 0) := (others => '0');
+    signal trap_cause_l : std_logic_vector(3 downto 0) := (others => '0');
     signal pending_external : std_logic;
     signal pending_timer : std_logic;
     signal pending_software : std_logic;
@@ -200,7 +200,7 @@ begin
                 interrupt_pending <= '0';
                 trap_active <= '0';
                 mepc <= (others => '0');
-                trap_cause <= (others => '0');
+                trap_cause_l <= (others => '0');
                 mstatus_mie <= '1';
                 mie_external <= '1';
                 mie_timer <= '1';
@@ -224,7 +224,7 @@ begin
                     when x"341" =>
                         mepc <= csr_new;
                     when x"342" =>
-                        trap_cause <= csr_new(3 downto 0);
+                        trap_cause_l <= csr_new(3 downto 0);
                     when others =>
                         null;
                 end case;
@@ -232,7 +232,7 @@ begin
                 interrupt_pending <= '0';
                 trap_active <= '1';
                 mepc <= Current_address;
-                trap_cause <= selected_cause;
+                trap_cause_l <= selected_cause;
             elsif is_mret = '1' and exec = '1' then
                 trap_active <= '0';
             elsif interrupt_request = '1' then
@@ -245,30 +245,39 @@ begin
     is_mret <= '1' when Read_Data = MRET_INSTR else '0';
     csr_write <= exec and CW.isCSR;
     csr_operand <= (31 downto 5 => '0') & CW.Asel when CW.CSRimm = '1' else rs1_value;
-
-    process(all)
+    
+    csr_read_proc : process(
+        CW, -- for CW.CSRaddr
+        mstatus_mie,
+        mie_external,
+        mie_timer,
+        mie_software,
+        mepc,
+        trap_cause_l,
+        INTERRUPT,
+        TIMER_INTERRUPT,
+        SOFTWARE_INTERRUPT
+    )
     begin
         csr_rdata <= (others => '0');
         case CW.CSRaddr is
-            when x"300" =>
-                csr_rdata(3) <= mstatus_mie;
-            when x"304" =>
-                csr_rdata(11) <= mie_external;
-                csr_rdata(7) <= mie_timer;
-                csr_rdata(3) <= mie_software;
-            when x"341" =>
-                csr_rdata <= mepc;
-            when x"342" =>
-                csr_rdata(31) <= '1';
-                csr_rdata(3 downto 0) <= trap_cause;
-            when x"344" =>
-                csr_rdata(11) <= INTERRUPT;
-                csr_rdata(7) <= TIMER_INTERRUPT;
-                csr_rdata(3) <= SOFTWARE_INTERRUPT;
-            when others =>
-                null;
-        end case;
-    end process;
+        when x"300" => csr_rdata(3) <= mstatus_mie;
+        when x"304" => 
+            csr_rdata(11) <= mie_external;
+            csr_rdata(7) <= mie_timer;
+            csr_rdata(3) <= mie_software;
+        when x"341" => csr_rdata <= mepc;
+        when x"342" =>
+            csr_rdata(31) <= '1';
+            csr_rdata(3 downto 0) <= trap_cause_l;
+        when x"344" =>
+            csr_rdata(11) <= INTERRUPT;
+            csr_rdata(7) <= TIMER_INTERRUPT;
+            csr_rdata(3) <= SOFTWARE_INTERRUPT;
+        when others => null;
+    end case;
+    end process csr_read_proc;
+
 
     CW_Zero <= (
         Asel => (others => '0'),
@@ -458,7 +467,7 @@ begin
 
     clear_cw_full <= clear_cw or interrupt_pending;
 
-    TRAP_CAUSE <= trap_cause;
+    TRAP_CAUSE <= trap_cause_l;
 
     n_ls_busy <= not ls_busy;
     
