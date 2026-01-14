@@ -15,6 +15,7 @@ architecture Behavioral of decoder is
     signal b_cw : control_word;
     signal u_cw : control_word;
     signal j_cw : control_word;
+    signal sys_cw : control_word;
     signal empty_cw : control_word;
     signal instr_type : op_type;
 begin
@@ -30,6 +31,7 @@ begin
     b_cw <= handle_b_type(instruction);
     u_cw <= handle_u_type(instruction);
     j_cw <= handle_j_type(instruction);
+    sys_cw <= handle_sys_type(instruction);
 
     empty_cw <= (
         Asel    => (others => '0'),
@@ -45,6 +47,10 @@ begin
         isBR    => '0',
         isLoad => '0',
         isStore => '0',
+        isCSR => '0',
+        CSRop => (others => '0'),
+        CSRimm => '0',
+        CSRaddr => (others => '0'),
         BRcond  => (others => '0'),
         ALUFunc => (others => '0'),
         IMM     => (others => '0')
@@ -58,6 +64,7 @@ begin
               b_cw when b_type,
               u_cw when u_type,
               j_cw when j_type,
+              sys_cw when sys_type,
           empty_cw when illegal,
           empty_cw when others;
 
